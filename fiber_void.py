@@ -154,7 +154,7 @@ for i in range(edge_circle): # 画 edge_circle 个边界圆
 
 # 画内部圆
 # 画第一个行星圆
-Inner = np.ones((int(inner),3)) # 记录行星圆的位置信息
+Inner = np.ones((int(inner),3)) # 行星圆的位置信息，初始化为inner行3列，每画一个圆就修改一行
 non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
 index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
 center_r = R[index] # 从数量不为0的圆里选到的圆，的半径
@@ -162,7 +162,7 @@ center_r = R[index] # 从数量不为0的圆里选到的圆，的半径
 inner_num = 0 # 行星圆的计数器
 center_x = np.round(random.uniform(-L / 10,  L / 10), 1) # 随机选择圆心的 x 坐标，保留一位小数
 center_y = np.round(random.uniform(-L / 10,  L / 10), 1) # 随机选择圆心的 y 坐标，保留一位小数
-Inner[inner_num] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
+Inner[inner_num] = np.array([pos_x, pos_y, pos_r]) # 记录行星圆的位置信息
 
 Circle = Circle + 1 # 已经画好的圆的序号加1
 position[Circle] = np.array([center_x, center_y, center_r]) # 记录第一个内部圆的位置信息
@@ -176,7 +176,8 @@ print(f"第{index}种圆还剩多少个：{Cir[index]}")
 l_min = 0.1 # 圆之间的最小间距
 attempt = 0 # 尝试次数
 max_attempt = 1000 # 最大尝试次数
-while inner_num < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的圆心就会变成下一个圆的center_x和center_y。inner是一个浮点数，需要转换为整数。
+i = 0 # 内部圆的计数器
+while i < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的圆心就会变成下一个圆的center_x和center_y。inner是一个浮点数，需要转换为整数。
     non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
     index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
     pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
@@ -195,7 +196,11 @@ while inner_num < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的�
             if (pos_x - position[j, 0]) ** 2 + (pos_y - position[j, 1]) ** 2 < (pos_r + position[j, 2]) ** 2:
                 overlap = True
                 break   
-        if overlap or pos_x < -L / 2 + pos_r or pos_x > L / 2 - pos_r or pos_y < -L / 2 + pos_r or pos_y > L / 2 - pos_r: # 如果重叠或者超出范围，重新选择圆心
+        if overlap or pos_x < -L / 2 + pos_r or pos_x > L / 2 - pos_r or pos_y < -L / 2 + pos_r or pos_y > L / 2 - pos_r: # 如果重叠或者超出范围，重新选择圆心和半径
+            non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+            index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
+            pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+            l_max = (center_r + pos_r) / 4 - 4 * l_min # 控制体积分数的关键参数
             theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
             radii = random.uniform(l_min + center_r + pos_r, l_max + center_r +pos_r) # 随机选择一个半径 radii (lmin+r1+r2 到 lmax+r1+r2 之间)
             pos_x = np.round(center_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
@@ -206,7 +211,7 @@ while inner_num < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的�
             position[Circle] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
             Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
             # 更新下一个内部圆的圆心
-            i = i + 1
+            i = i + 1 # 内部圆的计数器加1
             Inner[i] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
             break
     if attempt == max_attempt: # 如果尝试次数达到最大尝试次数，就换下一个行星圆
