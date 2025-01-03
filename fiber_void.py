@@ -29,7 +29,7 @@ print(f"纤维体积分数为：{Volume_f}")
 Volume_v = np.sum(Volume[-void:]) # 后void个元素之和，即孔隙体积分数
 print(f"孔隙体积分数为：{Volume_v}")
 
-# 随机位置刷新
+# 随机位置刷新，确定三个位置的圆的数量的配比
 Number = np.sum(Num) # 所有圆的数量之和
 print(f"所有圆的数量为：{Number}")
 corner = np.random.choice([0, 4]) # 从 [0, 4] 中随机选择一个元素，角点圆数量=coner/4
@@ -50,7 +50,188 @@ inner = Number-corner/4-edge/2 # 除了角点圆和边界圆，剩下的都是�
 print(f"内部圆数量为：{inner}")
 
 # 画角点圆
-if corner == 4: # 如果有角点圆
+import math
+Cir = Num # 圆的计数器，每一种半径的圆还剩下多少个没画
+non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+position = np.ones((int(corner + edge + inner), 3)) # 用于存放圆的位置信息，每一行存放一个圆的位置信息：圆心坐标和半径。初始化为(corner+edge+inner)行3列，每画一个圆就修改一行。由于角点圆和边界圆会有衍生圆，所以圆的总数量不等于Number，而是等于corner+edge+inner。
+Circle = -1 # 画的圆的序号，从-1开始，这样序号就会从0开始
+if corner == 4: # 如果有角点圆，从数量不为0的圆里随机选一个画。逻辑：选确定半径，再确定圆心，最后再补全周期性。
+    corner_x = L/2
+    corner_y = L/2 # 从右上角开始画
+
+    index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
+    pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+
+    # 以右上角为圆心，画一个半径为 pos_r 的圆，在这个圆里（不包括圆的边界）随机选一个点作为角点圆的圆心
+    theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)，注意区分 random.uniform 和 np.random.uniform，两者用法不同
+    radii = random.uniform(0, pos_r) # 随机选择一个半径 radii (0 到 pos_r)
+    pos_x = np.round(corner_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
+    pos_y = np.round(corner_y + radii * math.sin(theta), 1) # 随机选择的圆心 y 坐标，保留一位小数
+
+    Circle = Circle + 1 # 画的圆的序号加1
+    position[Circle] = np.array([pos_x, pos_y, pos_r]) # 记录角点圆的位置信息
+    Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
+
+    print(f"第{Circle}个圆的种类索引：{index}")
+    print(f"第{Circle}个圆的位置信息：圆心在({position[Circle,0]},{position[Circle,1]})，半径为{position[Circle,2]}")
+    print(f"第{index}种圆还剩多少个：{Cir[index]}")
+
+    Circle = Circle + 1 # 左上角补一个圆
+    position[Circle] = np.array([pos_x - L, pos_y, pos_r]) # 记录左上角的角点圆的位置信息
+    Circle = Circle + 1 # 左下角补一个圆
+    position[Circle] = np.array([pos_x - L, pos_y - L, pos_r]) # 记录左下角的角点圆的位置信息
+    Circle = Circle + 1 # 右下角补一个圆
+    position[Circle] = np.array([pos_x, pos_y - L, pos_r]) # 记录右下角的角点圆的位置信息
+
+
+# 画边界圆
+edge_circle = edge // 2 # 边界圆的数量
+for i in range(edge_circle): # 画 edge_circle 个边界圆
+    non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+    index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
+    pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+
+    if i < edge_circle // 2: # 左右边界画一半数量的边界圆
+        pos_x = np.round(random.uniform(-L / 2 - pos_r, -L / 2 + pos_r)) # 随机选择圆心的 x 坐标，保留一位小数
+        pos_y = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r)) # 随机选择圆心的 y 坐标，保留一位小数
+
+        # 检查是否与已画的圆重叠
+        while True:
+            overlap = False
+            for j in range(Circle + 1):
+                if (pos_x - position[j, 0]) ** 2 + (pos_y - position[j, 1]) ** 2 < (pos_r + position[j, 2]) ** 2: # 判断圆心之间的距离是否小于两个圆的半径之和
+                    overlap = True
+                    break   
+            if overlap: # 如果重叠，重新选择圆心
+                pos_x = np.round(random.uniform(-L / 2 - pos_r, -L / 2 + pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数
+                pos_y = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 y 坐标，保留一位小数
+            else:
+                break
+        
+        # 不重叠，就在左边界画一个圆
+        Circle = Circle + 1 # 已经画好的圆的序号加1
+        position[Circle] = np.array([pos_x, pos_y, pos_r]) # 记录边界圆的位置信息
+        # 右边界补一个圆
+        Circle = Circle + 1 # 已经画好的圆的序号加1
+        position[Circle] = [pos_x + L, pos_y, pos_r] # 记录边界圆的位置信息
+        Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
+
+
+
+    else: # 上下边界再画另一半数量的边界圆（数量不一定要各一半？可以随机，后续还可以调整，先这么写）
+        pos_x = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数
+        pos_y = np.round(random.uniform( L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 y 坐标，保留一位小数
+
+        # 检查是否有圆与已画的圆重叠
+        while True:
+            overlap = False
+            for j in range(Circle + 1):
+                if (pos_x - position[j, 0]) ** 2 + (pos_y - position[j, 1]) ** 2 < (pos_r + position[j, 2]) ** 2:
+                    overlap = True
+                    break   
+            if overlap:
+                pos_x = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数
+                pos_y = np.round(random.uniform( L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 y 坐标，保留一位小数
+            else:
+                break
+        
+        # 不重叠，就在上边界画一个圆
+        Circle = Circle + 1 # 已经画好的圆的序号加1
+        position[Circle] = [pos_x, pos_y, pos_r] # 记录边界圆的位置信息
+        # 下边界补一个圆
+        Circle = Circle + 1 # 已经画好的圆的序号加1
+        position[Circle] = [pos_x, pos_y - L, pos_r] # 记录边界圆的位置信息
+        Cir[index] = Cir[index] - 1
+
+    i = i + 1
+
+'''
+    print(f"第{Circle}个圆的种类索引：{index}")
+    print(f"第{Circle}个圆的位置信息：圆心在({position[Circle,0]},{position[Circle,1]})，半径为{position[Circle,2]}")
+    print(f"第{index}种圆还剩多少个：{Cir[index]}")
+'''
+
+
+# 画内部圆
+# 画第一个行星圆
+Inner = np.ones((int(inner),3)) # 记录行星圆的位置信息
+non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
+center_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+
+inner_num = 0 # 行星圆的计数器
+center_x = np.round(random.uniform(-L / 10,  L / 10), 1) # 随机选择圆心的 x 坐标，保留一位小数
+center_y = np.round(random.uniform(-L / 10,  L / 10), 1) # 随机选择圆心的 y 坐标，保留一位小数
+Inner[inner_num] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
+
+Circle = Circle + 1 # 已经画好的圆的序号加1
+position[Circle] = np.array([center_x, center_y, center_r]) # 记录第一个内部圆的位置信息
+
+Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
+
+print(f"第{Circle}个圆的种类索引：{index}")
+print(f"第{Circle}个圆的位置信息：圆心在({position[Circle,0]},{position[Circle,1]})，半径为{position[Circle,2]}")
+print(f"第{index}种圆还剩多少个：{Cir[index]}")
+
+l_min = 0.1 # 圆之间的最小间距
+attempt = 0 # 尝试次数
+max_attempt = 1000 # 最大尝试次数
+while inner_num < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的圆心就会变成下一个圆的center_x和center_y。inner是一个浮点数，需要转换为整数。
+    non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+    index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
+    pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+    l_max = (center_r + pos_r) / 4 - 4 * l_min # 控制体积分数的关键参数
+
+    # 以第一个内部圆为圆心，画一个半径在 lmin+r1+r2 和 lmax+r1+r2 之间的圆环，在这个圆环里（不包括圆环的边界？）随机选一个点作为下一个内部圆的圆心
+    theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
+    radii = random.uniform(l_min + center_r + pos_r, l_max + center_r +pos_r) # 随机选择一个半径 radii (lmin+r1+r2 到 lmax+r1+r2 之间)
+    pos_x = np.round(center_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
+    pos_y = np.round(center_y + radii * math.sin(theta), 1) # 随机选择的圆心 y 坐标，保留一位小数
+
+    # 检查是否是内部圆，以及是否与已画的圆重叠
+    for attempt in range(max_attempt):
+        overlap = False
+        for j in range(Circle + 1):
+            if (pos_x - position[j, 0]) ** 2 + (pos_y - position[j, 1]) ** 2 < (pos_r + position[j, 2]) ** 2:
+                overlap = True
+                break   
+        if overlap or pos_x < -L / 2 + pos_r or pos_x > L / 2 - pos_r or pos_y < -L / 2 + pos_r or pos_y > L / 2 - pos_r: # 如果重叠或者超出范围，重新选择圆心
+            theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
+            radii = random.uniform(l_min + center_r + pos_r, l_max + center_r +pos_r) # 随机选择一个半径 radii (lmin+r1+r2 到 lmax+r1+r2 之间)
+            pos_x = np.round(center_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
+            pos_y = np.round(center_y + radii * math.sin(theta), 1) # 随机选择的圆心 y 坐标，保留一位小数
+            attempt += 1
+        else: 
+            Circle = Circle + 1 # 已经画好的圆的序号加1
+            position[Circle] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
+            Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
+            # 更新下一个内部圆的圆心
+            i = i + 1
+            Inner[i] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
+            break
+    if attempt == max_attempt: # 如果尝试次数达到最大尝试次数，就换下一个行星圆
+        print("更换行星圆")
+        inner_num = inner_num + 1
+        center_x = Inner[inner_num, 0]
+        center_y = Inner[inner_num, 1]
+        center_r = Inner[inner_num, 2]
+
+
+
+print(f"所有的圆：{position}，数量为：{len(position)}")
+print(f"所有圆的计数器篮子：{Cir}")
+
+# 画图
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+fig, ax = plt.subplots()
+ax.set_xlim(-L/2, L/2)
+ax.set_ylim(-L/2, L/2)
+ax.set_aspect('equal')
+for i in range(len(position)):
+    circle = plt.Circle((position[i, 0], position[i, 1]), position[i, 2], edgecolor='blue', fill=False)
+    ax.add_artist(circle)
+plt.show()
 
 
 
