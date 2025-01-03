@@ -243,7 +243,9 @@ while i < int(Plan) - 1: # 画 Plan-1 个内部圆，每一个纤维的圆心就
 
 
 print(f"RSE算法数量结算——纤维还剩多少个：{Cir[:fiber]}")
-yubu = np.sum(Cir[:fiber]) # 纤维还剩多少个，用孔隙的Hard-Core算法填充RSE算法填不下了的纤维，名为“余补”
+zero = np.sum(Cir[:fiber]) # RSE算法下纤维还剩多少个没画完
+Cir[:fiber] = 0 # 纤维的数量归零
+position = position[:-zero] # 去掉没有画的纤维的位置信息
 
 # 孔隙采用Hard-Core算法
 satellite = Cir[-void:]
@@ -254,8 +256,8 @@ attempt = 0 # 尝试次数
 max_attempt = 1000 # 最大尝试次数
 
 void_num = 0 # 孔隙的计数器
-while void_num < Sate + yubu: # 画 Sate 个孔隙，再加上RSE算法没画完的纤维
-    non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选。让没画完的纤维也进来画？
+while void_num < Sate: # 画 Sate 个孔隙
+    non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选。
     index = max(non_zero_circle, key=lambda idx: R[idx]) # 从数量不为0的圆里选到的半径最大的圆，的索引。
                                                         # 和前面不同，这里是选最大的半径的圆，合理的顺序应该是先放大的圆，再放小的圆。
                                                         # 否则小圆把空间分割得很碎，大圆就没地方放了。
@@ -271,7 +273,7 @@ while void_num < Sate + yubu: # 画 Sate 个孔隙，再加上RSE算法没画完
                 overlap = True
                 break   
         if overlap: # 如果重叠，重新选择圆心
-            pos_x = np.round(random.uniform(-L / 2 - pos_r, -L / 2 + pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数
+            pos_x = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数
             pos_y = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 y 坐标，保留一位小数
             attempt += 1
         else:
