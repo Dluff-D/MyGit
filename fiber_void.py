@@ -153,37 +153,36 @@ for i in range(edge_circle): # 画 edge_circle 个边界圆
 
 
 # 画内部圆
-# 画第一个行星圆
-Inner = np.ones((int(inner),3)) # 行星圆的位置信息，初始化为inner行3列，每画一个圆就修改一行
-non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
-index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
-center_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+# 纤维采用RSE算法
+planet = Cir[:fiber]
+print(f"内部圆要画的纤维个数：{planet}")
+Plan = np.sum(planet)
+Inner = np.ones((int(Plan),3)) # 行星圆的位置信息，初始化为Plan行3列，每画一个纤维就修改一行
+
+non_zero_planet = [i for i, x in enumerate(planet) if x != 0] # 检查非零元素，我们要画的纤维只能是从数量不为0的纤维里选
+index = random.choice(non_zero_planet) # 从数量不为0的纤维里选到的纤维，的索引
+center_r = R[index] # 从数量不为0的纤维里选到的纤维，的半径
 
 inner_num = 0 # 行星圆的计数器
 center_x = np.round(random.uniform(-L / 10,  L / 10), 1) # 随机选择圆心的 x 坐标，保留一位小数
 center_y = np.round(random.uniform(-L / 10,  L / 10), 1) # 随机选择圆心的 y 坐标，保留一位小数
-Inner[inner_num] = np.array([pos_x, pos_y, pos_r]) # 记录行星圆的位置信息
 
 Circle = Circle + 1 # 已经画好的圆的序号加1
-position[Circle] = np.array([center_x, center_y, center_r]) # 记录第一个内部圆的位置信息
+position[Circle] = np.array([center_x, center_y, center_r]) # 记录内部圆的位置信息
+Cir[index] = Cir[index] - 1 # 选到的圆的数量减1，即纤维的数量减1，因为纤维在前面，与Cir的索引重合，所以索引不用变
+print(f"画了第一个纤维，还剩多少个：{Cir[:fiber]}")
 
-Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
-
-print(f"第{Circle}个圆的种类索引：{index}")
-print(f"第{Circle}个圆的位置信息：圆心在({position[Circle,0]},{position[Circle,1]})，半径为{position[Circle,2]}")
-print(f"第{index}种圆还剩多少个：{Cir[index]}")
-
-l_min = 0.1 # 圆之间的最小间距
+l_min = 0.1 # 纤维之间的最小间距
+l_max = 0.6 # 控制体积分数的关键参数
 attempt = 0 # 尝试次数
-max_attempt = 1000 # 最大尝试次数
-i = 0 # 内部圆的计数器
-while i < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的圆心就会变成下一个圆的center_x和center_y。inner是一个浮点数，需要转换为整数。
-    non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
-    index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
-    pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
-    l_max = (center_r + pos_r) / 4 - 4 * l_min # 控制体积分数的关键参数
-
-    # 以第一个内部圆为圆心，画一个半径在 lmin+r1+r2 和 lmax+r1+r2 之间的圆环，在这个圆环里（不包括圆环的边界？）随机选一个点作为下一个内部圆的圆心
+max_attempt = 2000 # 最大尝试次数
+i = 0 # 纤维圆的计数器
+while i < int(Plan) - 1: # 画 Plan-1 个内部圆，每一个纤维的圆心就会变成下一个行星圆的center_x和center_y。Plan是一个浮点数，需要转换为整数。
+    non_zero_planet = [i for i, x in enumerate(planet) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+    index = random.choice(non_zero_planet) # 从数量不为0的纤维里选到的纤维，的索引
+    pos_r = R[index] # 从数量不为0的纤维里选到的纤维，的半径
+    
+    # 以第一个纤维的圆心为圆心，画一个半径在 lmin+r1+r2 和 lmax+r1+r2 之间的圆环，在这个圆环里（不包括圆环的边界？）随机选一个点作为下一个内部圆的圆心
     theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
     radii = random.uniform(l_min + center_r + pos_r, l_max + center_r +pos_r) # 随机选择一个半径 radii (lmin+r1+r2 到 lmax+r1+r2 之间)
     pos_x = np.round(center_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
@@ -195,12 +194,11 @@ while i < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的圆心就�
         for j in range(Circle + 1):
             if (pos_x - position[j, 0]) ** 2 + (pos_y - position[j, 1]) ** 2 < (pos_r + position[j, 2]) ** 2:
                 overlap = True
-                break   
+                break   # break 只能跳出最内层的循环（for 和 while，if不是循环），所以这里只能跳出 for j in range(Circle + 1) 这个循环
         if overlap or pos_x < -L / 2 + pos_r or pos_x > L / 2 - pos_r or pos_y < -L / 2 + pos_r or pos_y > L / 2 - pos_r: # 如果重叠或者超出范围，重新选择圆心和半径
-            non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
-            index = random.choice(non_zero_circle) # 从数量不为0的圆里选到的圆，的索引
+            non_zero_planet = [i for i, x in enumerate(planet) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
+            index = random.choice(non_zero_planet) # 从数量不为0的圆里选到的圆，的索引
             pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
-            l_max = (center_r + pos_r) / 4 - 4 * l_min # 控制体积分数的关键参数
             theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
             radii = random.uniform(l_min + center_r + pos_r, l_max + center_r +pos_r) # 随机选择一个半径 radii (lmin+r1+r2 到 lmax+r1+r2 之间)
             pos_x = np.round(center_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
@@ -210,21 +208,41 @@ while i < int(inner) - 1: # 画 inner-1 个内部圆，每一个圆的圆心就�
             Circle = Circle + 1 # 已经画好的圆的序号加1
             position[Circle] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
             Cir[index] = Cir[index] - 1 # 选到的圆的数量减1
-            # 更新下一个内部圆的圆心
-            i = i + 1 # 内部圆的计数器加1
-            Inner[i] = np.array([pos_x, pos_y, pos_r]) # 记录内部圆的位置信息
-            break
+            # 更新下一个纤维的圆心
+            i = i + 1 # 纤维的计数器加1
+            print(f"纤维还剩多少个：{Cir[:fiber]}")
+            Inner[i] = np.array([pos_x, pos_y, pos_r]) # 记录纤维的位置信息
+            break # 跳出 for attempt in range(max_attempt) 这个循环
     if attempt == max_attempt: # 如果尝试次数达到最大尝试次数，就换下一个行星圆
         print("更换行星圆")
         inner_num = inner_num + 1
+        if inner_num > Plan -1 : # 放下纤维的总体空间还是有的，就是被纤维之间分割成小块了，如何突破这一限制？
+                                # 可以让纤维移动起来，把空间挪出来。比如让纤维像小球一样受到重力，向下移动，同时保持不重叠。
+            print("纤维实在画不下了，不信你看")
+            import matplotlib.pyplot as plt
+            import matplotlib.patches as patches
+            fig, ax = plt.subplots()
+            ax.set_xlim(-L/2, L/2)
+            ax.set_ylim(-L/2, L/2)
+            ax.set_aspect('equal')
+            for i in range(len(position)):
+                circle = plt.Circle((position[i, 0], position[i, 1]), position[i, 2], edgecolor='blue', fill=False)
+                ax.add_artist(circle)
+            plt.show()
+            break # 跳出 while i < int(Plan) - 1 这个循环        
         center_x = Inner[inner_num, 0]
         center_y = Inner[inner_num, 1]
         center_r = Inner[inner_num, 2]
 
 
+print(f"纤维还剩多少个：{Cir[:fiber]}")
 
-print(f"所有的圆：{position}，数量为：{len(position)}")
-print(f"所有圆的计数器篮子：{Cir}")
+# 孔隙采用Hard-Core算法
+satellite = Cir[-void:]
+print(f"孔隙还剩多少个：{satellite}")
+Sate = np.sum(satellite)
+
+
 
 # 画图
 import matplotlib.pyplot as plt
