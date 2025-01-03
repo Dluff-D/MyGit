@@ -173,7 +173,6 @@ Cir[index] = Cir[index] - 1 # 选到的圆的数量减1，即纤维的数量减1
 print(f"画了第一个纤维，还剩多少个：{Cir[:fiber]}")
 
 l_min = 0.1 # 纤维之间的最小间距
-l_max = 0.6 # 控制体积分数的关键参数
 attempt = 0 # 尝试次数
 max_attempt = 2000 # 最大尝试次数
 i = 0 # 纤维圆的计数器
@@ -181,6 +180,7 @@ while i < int(Plan) - 1: # 画 Plan-1 个内部圆，每一个纤维的圆心就
     non_zero_planet = [i for i, x in enumerate(planet) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
     index = random.choice(non_zero_planet) # 从数量不为0的纤维里选到的纤维，的索引
     pos_r = R[index] # 从数量不为0的纤维里选到的纤维，的半径
+    l_max = (center_r + pos_r) / 10 - 4 * l_min # 控制体积分数的关键参数
     
     # 以第一个纤维的圆心为圆心，画一个半径在 lmin+r1+r2 和 lmax+r1+r2 之间的圆环，在这个圆环里（不包括圆环的边界？）随机选一个点作为下一个内部圆的圆心
     theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
@@ -199,6 +199,8 @@ while i < int(Plan) - 1: # 画 Plan-1 个内部圆，每一个纤维的圆心就
             non_zero_planet = [i for i, x in enumerate(planet) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选
             index = random.choice(non_zero_planet) # 从数量不为0的圆里选到的圆，的索引
             pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+            l_max = (center_r + pos_r) / 10 - 4 * l_min # 重选了半径，所以lmax也要重新计算
+
             theta = random.uniform(0, 2 * math.pi) # 随机选择一个角度 θ (0 到 2π)
             radii = random.uniform(l_min + center_r + pos_r, l_max + center_r +pos_r) # 随机选择一个半径 radii (lmin+r1+r2 到 lmax+r1+r2 之间)
             pos_x = np.round(center_x + radii * math.cos(theta), 1) # 随机选择的圆心 x 坐标，保留一位小数
@@ -217,7 +219,11 @@ while i < int(Plan) - 1: # 画 Plan-1 个内部圆，每一个纤维的圆心就
         print("更换行星圆")
         inner_num = inner_num + 1
         if inner_num > Plan -1 : # 放下纤维的总体空间还是有的，就是被纤维之间分割成小块了，如何突破这一限制？
+                                # 或者让边界上的纤维稍微多一点，我没有采用论文中提到的在生成的同时处理边界的周期性，而是先生成了边界的圆，再生成内部的圆。
+                                # 是不是完全采用论文的方法就可以解决这个问题？
                                 # 可以让纤维移动起来，把空间挪出来。比如让纤维像小球一样受到重力，向下移动，同时保持不重叠。
+                                # 如何紧密排列，再随机碰撞？
+            '''       
             print("纤维实在画不下了，不信你看")
             import matplotlib.pyplot as plt
             import matplotlib.patches as patches
@@ -229,20 +235,55 @@ while i < int(Plan) - 1: # 画 Plan-1 个内部圆，每一个纤维的圆心就
                 circle = plt.Circle((position[i, 0], position[i, 1]), position[i, 2], edgecolor='blue', fill=False)
                 ax.add_artist(circle)
             plt.show()
+            ''' 
             break # 跳出 while i < int(Plan) - 1 这个循环        
         center_x = Inner[inner_num, 0]
         center_y = Inner[inner_num, 1]
         center_r = Inner[inner_num, 2]
 
 
-print(f"纤维还剩多少个：{Cir[:fiber]}")
+print(f"RSE算法数量结算——纤维还剩多少个：{Cir[:fiber]}")
+yubu = np.sum(Cir[:fiber]) # 纤维还剩多少个，用孔隙的Hard-Core算法填充RSE算法填不下了的纤维，名为“余补”
 
 # 孔隙采用Hard-Core算法
 satellite = Cir[-void:]
-print(f"孔隙还剩多少个：{satellite}")
+print(f"孔隙还要画多少个：{satellite}")
 Sate = np.sum(satellite)
 
+attempt = 0 # 尝试次数
+max_attempt = 1000 # 最大尝试次数
 
+void_num = 0 # 孔隙的计数器
+while void_num < Sate + yubu: # 画 Sate 个孔隙，再加上RSE算法没画完的纤维
+    non_zero_circle = [i for i, x in enumerate(Cir) if x != 0] # 检查非零元素，我们要画的圆只能是从数量不为0的圆里选。让没画完的纤维也进来画？
+    index = max(non_zero_circle, key=lambda idx: R[idx]) # 从数量不为0的圆里选到的半径最大的圆，的索引。
+                                                        # 和前面不同，这里是选最大的半径的圆，合理的顺序应该是先放大的圆，再放小的圆。
+                                                        # 否则小圆把空间分割得很碎，大圆就没地方放了。
+                                                        # 和我们先用RSE算法放纤维，再用Hard-Core算法放孔隙的逻辑是一样的，也是先放大的，再放小的。
+    pos_r = R[index] # 从数量不为0的圆里选到的圆，的半径
+    pos_x = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数。这个范围是不考虑与边界圆重叠的内部圆的理论范围。
+    pos_y = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 y 坐标，保留一位小数
+    # 检查是否与已画的圆重叠
+    for attempt in range(max_attempt):
+        overlap = False
+        for j in range(Circle + 1):
+            if (pos_x - position[j, 0]) ** 2 + (pos_y - position[j, 1]) ** 2 < (pos_r + position[j, 2]) ** 2: # 判断圆心之间的距离是否小于两个圆的半径之和
+                overlap = True
+                break   
+        if overlap: # 如果重叠，重新选择圆心
+            pos_x = np.round(random.uniform(-L / 2 - pos_r, -L / 2 + pos_r), 1) # 随机选择圆心的 x 坐标，保留一位小数
+            pos_y = np.round(random.uniform(-L / 2 + pos_r,  L / 2 - pos_r), 1) # 随机选择圆心的 y 坐标，保留一位小数
+            attempt += 1
+        else:
+            Circle = Circle + 1 # 已经画好的圆的序号加1
+            position[Circle] = np.array([pos_x, pos_y, pos_r])
+            Cir[index] = Cir[index] - 1
+            void_num = void_num + 1
+            print(f"孔隙还剩多少个：{Cir[-void:]}")
+            break
+
+print(f"Hard-Core算法数量结算——孔隙还剩多少个：{satellite}")
+print(f"两个算法数量结算——所有的圆还剩多少个：{Cir}")
 
 # 画图
 import matplotlib.pyplot as plt
@@ -255,7 +296,4 @@ for i in range(len(position)):
     circle = plt.Circle((position[i, 0], position[i, 1]), position[i, 2], edgecolor='blue', fill=False)
     ax.add_artist(circle)
 plt.show()
-
-
-
 
